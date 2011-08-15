@@ -17,6 +17,28 @@ namespace ABGraduator
         }
 
         GraduatorForm graduatorForm = new GraduatorForm();
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            graduatorForm.CurrentDegreeEvent += new GraduatorForm.ChangedDegreeHandler(graduatorForm_CurrentDegreeEvent);
+            graduatorForm.LatestDegreeEvent += new GraduatorForm.ChangedDegreeHandler(graduatorForm_LatestDegreeEvent);
+            graduatorForm.StoreDegreeEvent += new GraduatorForm.ChangedDegreeHandler(graduatorForm_StoreDegreeEvent);
+        }
+
+        void graduatorForm_StoreDegreeEvent(object o, double degree)
+        {
+            labelStore.Text = degree.ToString("0.000");
+        }
+
+        void graduatorForm_LatestDegreeEvent(object o, double degree)
+        {
+            labelLatest.Text = degree.ToString("0.000");
+        }
+
+        void graduatorForm_CurrentDegreeEvent(object o, double degree)
+        {
+            labelCurrent.Text = degree.ToString("0.000");
+        }
+
         private void MainForm_Shown(object sender, EventArgs e)
         {
             graduatorForm.Show();
@@ -61,6 +83,5 @@ namespace ABGraduator
         {
             graduatorForm.RecordPrevPoint();
         }
-
     }
 }

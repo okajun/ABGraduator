@@ -13,6 +13,11 @@ namespace ABGraduator
 {
     public partial class GraduatorForm : Form
     {
+        public delegate void ChangedDegreeHandler(object o, double degree);
+        public event ChangedDegreeHandler CurrentDegreeEvent = delegate(Object s, double degree) { };
+        public event ChangedDegreeHandler LatestDegreeEvent = delegate(Object s, double degree) { };
+        public event ChangedDegreeHandler StoreDegreeEvent = delegate(Object s, double degree) { };
+
         public GraduatorForm()
         {
             InitializeComponent();
@@ -36,20 +41,22 @@ namespace ABGraduator
         public void RecordPrevPoint()
         {
             recordFire = prevFire;
-            Invalidate();
+            StoreDegreeEvent(this, RecordDegree);
+            Invalidate(); 
         }
+
+        private const int NUM = 12;
+        private const float MGN = 2.0f;
+        private const float innerCircleRadius = 16.0f;
 
         private Point currentPoint = Point.Empty;
         private Point prevFire = Point.Empty;
         private Point recordFire = Point.Empty;
         private void GraduatorForm_Paint(object sender, PaintEventArgs e)
         {
-            const int NUM = 12;
-            const float mgn = 2.0f;
-            var radius = (float)((Width - mgn*2.0f) / 2.0f);
-            var center = new PointF(radius + mgn, radius + mgn);
-            var innerCircleRadius = 16.0f;
-            var innerRect = new RectangleF(new PointF(mgn + radius - innerCircleRadius, mgn + radius - innerCircleRadius)
+            var radius = (float)((Width - MGN*2.0f) / 2.0f);
+            var center = new PointF(radius + MGN, radius + MGN);
+            var innerRect = new RectangleF(new PointF(MGN + radius - innerCircleRadius, MGN + radius - innerCircleRadius)
                     , new SizeF(innerCircleRadius*2,innerCircleRadius*2));
 
             using (SolidBrush beforeBrush = new SolidBrush(Color.FromArgb(142, Color.RosyBrown))
@@ -69,7 +76,7 @@ namespace ABGraduator
                         var ex = (float)(center.X + (radius * Math.Cos(2 * Math.PI * i / NUM)));
                         var ey = (float)(center.Y + (radius * Math.Sin(2 * Math.PI * i / NUM)));
                         e.Graphics.DrawLine(gridPen, new PointF(sx, sy), new PointF(ex, ey));
-                        e.Graphics.DrawArc(gridPen, new RectangleF(mgn, mgn, radius * 2, radius * 2), 0.0f, 360.0f);
+                        e.Graphics.DrawArc(gridPen, new RectangleF(MGN, MGN, radius * 2, radius * 2), 0.0f, 360.0f);
                     }
                     if (!recordFire.IsEmpty)
                     {
@@ -87,6 +94,19 @@ namespace ABGraduator
             }
         }
 
+
+        private double PointToDegree(PointF p)
+        {
+            if (p.IsEmpty)
+            {
+                return double.NaN;
+            }
+            var radius = (float)((Width - MGN * 2.0f) / 2.0f);
+            var center = new PointF(radius + MGN, radius + MGN);
+            double r = Math.Atan2(p.Y - center.Y, p.X - center.X);
+            return r * 180 / Math.PI;
+        }
+        
         void drawDivideCircle(PointF center, float innerRadius, float radius, Point containsPoint, Graphics g, Pen pen)
         {
             double r = Math.Atan2(containsPoint.Y - center.Y, containsPoint.X - center.X);
@@ -117,10 +137,13 @@ namespace ABGraduator
                 {
                     return;
                 }
-                if (StorePoint(e.Location, ref prevFire))
-                {
-                    Invalidate();
-                }
+                prevFire = PointToClient(e.Location);
+                LatestDegreeEvent(this, LatestDegree);
+                Invalidate();
+                //if (StorePoint(e.Location, ref prevFire))
+                //{
+                //    Invalidate();
+                //}
             }
         }
 
@@ -142,6 +165,7 @@ namespace ABGraduator
         private void mouseHook_MouseMove(object sender, MouseEventArgs e)
         {
             currentPoint = PointToClient(e.Location);
+            CurrentDegreeEvent(this, CurrentDegree);
             Invalidate();
         }
 
@@ -159,6 +183,30 @@ namespace ABGraduator
         private void GraduatorForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             mouseHook.Stop();
+        }
+
+        public double CurrentDegree
+        {
+            get
+            {
+                return PointToDegree(currentPoint);
+            }
+        }
+
+        public double LatestDegree
+        {
+            get
+            {
+                return PointToDegree(prevFire);
+            }
+        }
+
+        public double RecordDegree
+        {
+            get
+            {
+                return PointToDegree(recordFire);
+            }
         }
 
     }
