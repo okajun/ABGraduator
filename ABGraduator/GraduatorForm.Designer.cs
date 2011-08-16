@@ -52,6 +52,7 @@
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.GraduatorForm_FormClosing);
             this.Load += new System.EventHandler(this.GraduatorForm_Load);
             this.Paint += new System.Windows.Forms.PaintEventHandler(this.GraduatorForm_Paint);
+            this.Resize += new System.EventHandler(this.GraduatorForm_Resize);
             this.ResumeLayout(false);
 
         }

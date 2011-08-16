@@ -19,28 +19,33 @@ namespace ABGraduator
         GraduatorForm graduatorForm = new GraduatorForm();
         private void MainForm_Load(object sender, EventArgs e)
         {
-            graduatorForm.CurrentDegreeEvent += new GraduatorForm.ChangedDegreeHandler(graduatorForm_CurrentDegreeEvent);
-            graduatorForm.LatestDegreeEvent += new GraduatorForm.ChangedDegreeHandler(graduatorForm_LatestDegreeEvent);
-            graduatorForm.StoreDegreeEvent += new GraduatorForm.ChangedDegreeHandler(graduatorForm_StoreDegreeEvent);
+            //カーソル、発射イベントを登録
+            graduatorForm.CursorEvent += new GraduatorForm.ChangedHandler(graduatorForm_CurrentEvent);
+            graduatorForm.LatestFireEvent += new GraduatorForm.ChangedHandler(graduatorForm_LatestEvent);
+            graduatorForm.RecordEvent += new GraduatorForm.ChangedHandler(graduatorForm_RecordEvent);
         }
 
-        void graduatorForm_StoreDegreeEvent(object o, double degree)
+        void graduatorForm_RecordEvent(object o, double degree)
         {
+            //保存した角度を表示
             labelStore.Text = degree.ToString("0.000");
         }
 
-        void graduatorForm_LatestDegreeEvent(object o, double degree)
+        void graduatorForm_LatestEvent(object o, double degree)
         {
+            //最後の発射角度を表示
             labelLatest.Text = degree.ToString("0.000");
         }
 
-        void graduatorForm_CurrentDegreeEvent(object o, double degree)
+        void graduatorForm_CurrentEvent(object o, double degree)
         {
+            //カーソル角度を表示
             labelCurrent.Text = degree.ToString("0.000");
         }
 
         private void MainForm_Shown(object sender, EventArgs e)
         {
+            //目盛りフォームの表示
             graduatorForm.Show();
             MoveGraduator();
         }
@@ -53,7 +58,8 @@ namespace ABGraduator
 
         private Point beginDragPoint;
         private void MainForm_MouseDown(object sender, MouseEventArgs e)
-        {
+        {   
+            //タイトルバーがないので、自前のウィンドウ移動処理
             if( e.Button == System.Windows.Forms.MouseButtons.Left)
             {
                 beginDragPoint = new Point(e.X, e.Y);
@@ -62,6 +68,7 @@ namespace ABGraduator
 
         private void MainForm_MouseMove(object sender, MouseEventArgs e)
         {
+            //タイトルバーがないので、自前のウィンドウ移動処理
             if (e.Button == System.Windows.Forms.MouseButtons.Left)
             {
                 Left = Left + e.X - beginDragPoint.X;
@@ -71,17 +78,20 @@ namespace ABGraduator
 
         private void MainForm_Move(object sender, EventArgs e)
         {
+            //目盛りフォームはMainFormに追従して動く
             MoveGraduator();
         }
 
         private void btnClose_Click(object sender, EventArgs e)
         {
+            //タイトルバーがないので自前の終了処理
             Close();
         }
 
         private void record_Click(object sender, EventArgs e)
         {
-            graduatorForm.RecordPrevPoint();
+            //角度の保存処理
+            graduatorForm.StoreLatestFire();
         }
     }
 }
