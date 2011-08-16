@@ -46,6 +46,7 @@ namespace ABGraduator
         }
 
         private const int NUM = 12;
+        private const int NUM_MN = NUM * 2;
         private const float MGN = 2.0f;
         private const float innerCircleRadius = 16.0f;
 
@@ -55,6 +56,7 @@ namespace ABGraduator
         private void GraduatorForm_Paint(object sender, PaintEventArgs e)
         {
             var radius = (float)((Width - MGN*2.0f) / 2.0f);
+            var gaugeRadius = radius - 16.0f;
             var center = new PointF(radius + MGN, radius + MGN);
             var innerRect = new RectangleF(new PointF(MGN + radius - innerCircleRadius, MGN + radius - innerCircleRadius)
                     , new SizeF(innerCircleRadius*2,innerCircleRadius*2));
@@ -69,14 +71,22 @@ namespace ABGraduator
                         )
                 {
                     e.Graphics.DrawArc(gridPen, innerRect, 0.0f, 360.0f);
-                    for (int i = 0; i < NUM; i++)
+                    e.Graphics.DrawArc(gridPen, new RectangleF(MGN, MGN, radius * 2, radius * 2), 0.0f, 360.0f);
+                    for (int i = 0; i < NUM_MN * 2; ++i)
+                    {
+                        var sx = (float)(center.X + (gaugeRadius * Math.Cos(2 * Math.PI * i / NUM_MN)));
+                        var sy = (float)(center.Y + (gaugeRadius * Math.Sin(2 * Math.PI * i / NUM_MN)));
+                        var ex = (float)(center.X + (radius * Math.Cos(2 * Math.PI * i / NUM_MN)));
+                        var ey = (float)(center.Y + (radius * Math.Sin(2 * Math.PI * i / NUM_MN)));
+                        e.Graphics.DrawLine(gridPen, new PointF(sx, sy), new PointF(ex, ey));
+                    }
+                    for (int i = 0; i < NUM; ++i)
                     {
                         var sx = (float)(center.X + (innerCircleRadius * Math.Cos(2 * Math.PI * i / NUM)));
                         var sy = (float)(center.Y + (innerCircleRadius * Math.Sin(2 * Math.PI * i / NUM)));
                         var ex = (float)(center.X + (radius * Math.Cos(2 * Math.PI * i / NUM)));
                         var ey = (float)(center.Y + (radius * Math.Sin(2 * Math.PI * i / NUM)));
                         e.Graphics.DrawLine(gridPen, new PointF(sx, sy), new PointF(ex, ey));
-                        e.Graphics.DrawArc(gridPen, new RectangleF(MGN, MGN, radius * 2, radius * 2), 0.0f, 360.0f);
                     }
                     if (!recordFire.IsEmpty)
                     {
@@ -103,7 +113,7 @@ namespace ABGraduator
             }
             var radius = (float)((Width - MGN * 2.0f) / 2.0f);
             var center = new PointF(radius + MGN, radius + MGN);
-            double r = Math.Atan2(p.Y - center.Y, p.X - center.X);
+            double r = Math.Atan2(p.Y - center.Y, -(p.X - center.X));
             return r * 180 / Math.PI;
         }
         
