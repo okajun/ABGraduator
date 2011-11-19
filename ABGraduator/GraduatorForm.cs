@@ -13,10 +13,10 @@ namespace ABGraduator
 {
     public partial class GraduatorForm : Form
     {
-        public delegate void ChangedHandler(object o, double degree);
-        public event ChangedHandler CursorEvent = delegate(Object s, double degree) { };    //カーソル変更イベント
-        public event ChangedHandler LatestFireEvent = delegate(Object s, double degree) { };    //発射イベント
-        public event ChangedHandler RecordEvent = delegate(Object s, double degree) { };    //保存イベント
+        public delegate void ChangedHandler(object o, double degree);   //event handler
+        public event ChangedHandler CursorEvent = delegate(Object s, double degree) { };        //mouse cursor evnet
+        public event ChangedHandler LatestShotEvent = delegate(Object s, double degree) { };    //shot event
+        public event ChangedHandler MarkEvent = delegate(Object s, double degree) { };          //mark event
 
         public GraduatorForm()
         {
@@ -35,7 +35,7 @@ namespace ABGraduator
         {
             get
             {
-                return PointToDegree(latestFire);
+                return PointToDegree(latestShot);
             }
         }
 
@@ -43,15 +43,15 @@ namespace ABGraduator
         {
             get
             {
-                return PointToDegree(recordFire);
+                return PointToDegree(markShot);
             }
         }
 
-        public void StoreLatestFire()
+        public void StoreLatestShot()
         {
 
-            recordFire = latestFire;
-            RecordEvent(this, RecordDegree);
+            markShot = latestShot;
+            MarkEvent(this, RecordDegree);
             Invalidate(); 
         }
 
@@ -59,43 +59,41 @@ namespace ABGraduator
         {
             get
             {
-                //マウスイベント透過の設定
+                //Set up transparent window.
                 System.Windows.Forms.CreateParams cp = base.CreateParams;
                 const int WS_EX_LAYERED = 0x00080000;
                 const int WS_EX_TRANSPARENT = 0x00000020;
 
-                cp.ExStyle = cp.ExStyle | WS_EX_LAYERED;
-                cp.ExStyle = cp.ExStyle | WS_EX_TRANSPARENT;
+                cp.ExStyle = cp.ExStyle | WS_EX_LAYERED;        // Layered Windows
+                cp.ExStyle = cp.ExStyle | WS_EX_TRANSPARENT;    // Don't hittest this window
                 return cp;
             }
         }
 
-        //以下、ゲージ描画用パラメータ
-        private const int NUM = 24;                     //目盛りのstep値 = 360 / 24 = 15度
-        private const float MGN = 2.0f;                 //目盛りとフォームとの間のマージン
-        private const float innerCircleRadius = 24.0f;  //鳥捕捉用センターサークル半径
+        private const int NUM = 24;                     //interval graduations 360 / 24 = 15degree
+        private const float MGN = 2.0f;                 //margin for between the graduator with the border
+        private const float centerCircleRadius = 24.0f;  //radius for center circle 
 
-        private Point currentPoint = Point.Empty;       //マウスカーソル位置
-        private Point latestFire = Point.Empty;         //最後に発射した位置
-        private Point recordFire = Point.Empty;         //保存した位置
+        private Point currentPoint = Point.Empty;       //mouse cursor point
+        private Point latestShot = Point.Empty;         //latest shot point
+        private Point markShot = Point.Empty;           //mark point
 
-        private float radius;                           //目盛りの外周半径
-        private float gaugeRadius;                      //短い目盛りの半径
-        private PointF center = PointF.Empty;           //目盛り外周円の中心
-        private RectangleF innerRect = RectangleF.Empty;//鳥捕捉センターサークルに外接するRectangle
+        private float radius;                           //radius for outer circle 
+        private float innerRadius;                      //radius for inner circle
+        private PointF center = PointF.Empty;           //center point
+        private RectangleF centerRect = RectangleF.Empty;//bounding rectangle for center circle
 
-        //Formリサイズ用にメモリ座標の計算
-        //今は固定サイズだけれども、念のため。
-        private void UpdateGaugeSize()
+        //To calculate size of graduator.
+        private void UpdateGraduatorSize()
         {
             radius = (float)(( ((Width > Height) ? Height : Width) - MGN * 2.0f) / 2.0f);
-            gaugeRadius = radius - 16.0f;
+            innerRadius = radius - 16.0f;
             center = new PointF(radius + MGN, radius + MGN);
-            innerRect = new RectangleF(new PointF(MGN + radius - innerCircleRadius, MGN + radius - innerCircleRadius)
-                    , new SizeF(innerCircleRadius * 2, innerCircleRadius * 2));
+            centerRect = new RectangleF(new PointF(MGN + radius - centerCircleRadius, MGN + radius - centerCircleRadius)
+                    , new SizeF(centerCircleRadius * 2, centerCircleRadius * 2));
         }
 
-        //描画
+        //draw graduator
         private void GraduatorForm_Paint(object sender, PaintEventArgs e)
         {
             using (SolidBrush latestBrush = new SolidBrush(Color.FromArgb(142, Color.RosyBrown))
@@ -107,41 +105,41 @@ namespace ABGraduator
                         , currentPen = new Pen(currentBrush, 8)
                         )
                 {
-                    e.Graphics.DrawArc(gaugePen, innerRect, 0.0f, 360.0f);  //外周円
-                    e.Graphics.DrawArc(gaugePen, new RectangleF(MGN, MGN, radius * 2, radius * 2), 0.0f, 360.0f);   //鳥捕捉センターサークル
-                    //目盛り描画
+                    e.Graphics.DrawArc(gaugePen, centerRect, 0.0f, 360.0f);  //draw outer circle
+                    e.Graphics.DrawArc(gaugePen, new RectangleF(MGN, MGN, radius * 2, radius * 2), 0.0f, 360.0f);   //draw center circle
+                    //draw graduations
                     for (int i = 0; i < NUM; ++i)
                     {
                         var r = 2 * Math.PI * i / NUM;
-                        //15度単位で短い目盛り、30度単位で長い目盛り
-                        var sx = ((i%2) !=0) ? (float)(center.X + (gaugeRadius * Math.Cos(2 * Math.PI * i / NUM)))
-                            : (float)(center.X + (innerCircleRadius * Math.Cos(r)));
-                        var sy = ((i%2) !=0) ? (float)(center.Y + (gaugeRadius * Math.Sin(r)))
-                            : (float)(center.Y + (innerCircleRadius * Math.Sin(r)));
+                        //for each 15 degree short line and 30 degree long line
+                        var sx = ((i%2) !=0) ? (float)(center.X + (innerRadius * Math.Cos(2 * Math.PI * i / NUM)))
+                            : (float)(center.X + (centerCircleRadius * Math.Cos(r)));
+                        var sy = ((i%2) !=0) ? (float)(center.Y + (innerRadius * Math.Sin(r)))
+                            : (float)(center.Y + (centerCircleRadius * Math.Sin(r)));
                         var ex = (float)(center.X + (radius * Math.Cos(r)));
                         var ey = (float)(center.Y + (radius * Math.Sin(r)));
                         e.Graphics.DrawLine(gaugePen, new PointF(sx, sy), new PointF(ex, ey));
                     }
-                    if (!recordFire.IsEmpty)
+                    if (!markShot.IsEmpty)
                     {
-                        //保存した角度描画
-                        drawDivideCircle(center, innerCircleRadius, radius, recordFire, e.Graphics, recordPen);
+                        //draw marked line
+                        drawDivideCircleLine(center, centerCircleRadius, radius, markShot, e.Graphics, recordPen);
                     }
-                    if (!latestFire.IsEmpty)
+                    if (!latestShot.IsEmpty)
                     {
-                        //最後の発射角度描画
-                        drawDivideCircle(center, innerCircleRadius, radius, latestFire, e.Graphics, latestPen);
+                        //draw latest line
+                        drawDivideCircleLine(center, centerCircleRadius, radius, latestShot, e.Graphics, latestPen);
                     }
                     if (!currentPoint.IsEmpty)
                     {
-                        //カーソル位置の角度描画
-                        drawDivideCircle(center, innerCircleRadius, radius, currentPoint, e.Graphics, currentPen);
+                        //draw current line
+                        drawDivideCircleLine(center, centerCircleRadius, radius, currentPoint, e.Graphics, currentPen);
                     }
                 }
             }
         }
-
-        //クライアント位置->角度計算
+         
+        //To calculate the angle from the center point of the graduator.
         private double PointToDegree(PointF p)
         {
             if (p.IsEmpty)
@@ -152,8 +150,8 @@ namespace ABGraduator
             return r * 180 / Math.PI;
         }
 
-        //角度描画
-        private void drawDivideCircle(PointF center, float innerRadius, float radius, Point containsPoint, Graphics g, Pen pen)
+        //Use to current, mark and latest line.
+        private void drawDivideCircleLine(PointF center, float innerRadius, float radius, Point containsPoint, Graphics g, Pen pen)
         {
             double r = Math.Atan2(containsPoint.Y - center.Y, containsPoint.X - center.X);
             var ss = new SizeF((float)(innerRadius * Math.Cos(r)), (float)(innerRadius * Math.Sin(r)));
@@ -166,44 +164,46 @@ namespace ABGraduator
         private MouseHook mouseHook = new MouseHook();
         private void GraduatorForm_Load(object sender, EventArgs e)
         {
-            //グローバルフックによるカーソルイベントの捕捉設定
-            //Global Mouse and Keyboard Library を利用
+            //Set up the global hook.
+            // Global Mouse and Keyboard Library
             // http://www.codeproject.com/KB/system/globalmousekeyboardlib.aspx
             mouseHook.MouseMove += new MouseEventHandler(mouseHook_MouseMove);
             mouseHook.MouseDown += new MouseEventHandler(mouseHook_MouseDown);
             mouseHook.MouseUp += new MouseEventHandler(mouseHook_MouseUp);
-            //マウスフック実行
+
             mouseHook.Start();
         }
 
-        //マウスボタンアップ
+        //Mouse up on the global hook.
         private void mouseHook_MouseUp(object sender, MouseEventArgs e)
         {
-            if (mouseDown)
+            if (mouseDown) // did mouse down?
             {
                 mouseDown = false;
                 exceptClickTimer.Stop();
                 if (250 > exceptClickTimer.ElapsedMilliseconds)
                 {
-                    //押下時間が250ms未満の場合は無視
+                    //ignore less than 250ms
                     return;
                 }
-                latestFire = PointToClient(e.Location);
-                LatestFireEvent(this, LatestDegree);
+                //Assume shooting the bird.
+                latestShot = PointToClient(e.Location);
+                LatestShotEvent(this, LatestDegree);
                 Invalidate();
             }
         }
 
         private bool mouseDown = false;
         private System.Diagnostics.Stopwatch exceptClickTimer = new System.Diagnostics.Stopwatch();
-        //マウスボタンダウン
+        //Mouse down on the global hook.
         private void mouseHook_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == System.Windows.Forms.MouseButtons.Left)
             {
                 //if (ClientRectangle.Contains(PointToClient(e.Location)))
-                if (innerRect.Contains(PointToClient(e.Location)))
+                if (centerRect.Contains(PointToClient(e.Location)))
                 {
+                    //If the location is contained center circle of graduator, assume catching the bird.
                     exceptClickTimer.Reset();
                     exceptClickTimer.Start();
                     mouseDown = true;
@@ -211,24 +211,22 @@ namespace ABGraduator
             }
         }
 
-        //マウスカーソル移動
+        //Mouse move on the global hook.
         private void mouseHook_MouseMove(object sender, MouseEventArgs e)
         {
             currentPoint = PointToClient(e.Location);
-            CursorEvent(this, CurrentDegree);
+            CursorEvent(this, CurrentDegree);   // cursor event shot
             Invalidate();
         }
 
         private void GraduatorForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            //マウスフック終了
             mouseHook.Stop();
         }
 
         private void GraduatorForm_Resize(object sender, EventArgs e)
         {
-            //目盛り描画諸元の計算
-            UpdateGaugeSize();
+            UpdateGraduatorSize();
         }
 
     }
